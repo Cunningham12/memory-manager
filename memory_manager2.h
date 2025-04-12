@@ -1,49 +1,84 @@
-#ifndef MEMORY_MANAGER_H
-#define MEMORY_MANAGER_H
-
-#include <vector>
-#include <unordered_map>
-#include <string>
-
-const int MEMORY_SIZE = 65535;
+#include "memory_manager.h"
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <sstream>
+#include <iomanip> // for hex formatting
 
 /**
- * @brief Represents a memory block in the manager.
+ * @brief Constructor initializes the memory manager with one large free block.
  */
-struct Block {
-    size_t start;
-    size_t size;
-    bool is_free;
-    int id;
-
-    Block(size_t start, size_t size, bool is_free, int id = -1)
-        : start(start), size(size), is_free(is_free), id(id) {}
-};
+MemoryManager::MemoryManager() : next_id(0) {
+    std::memset(memory, 0, MEMORY_SIZE);
+    blocks.emplace_back(0, MEMORY_SIZE, true);
+}
 
 /**
- * @brief A simple buddy-like memory manager that supports
- *        insert, delete, update, find, and dump operations.
+ * @brief Returns the next power of two greater than or equal to n.
  */
-class MemoryManager {
-private:
-    unsigned char memory[MEMORY_SIZE];                   // Raw memory buffer
-    std::vector<Block> blocks;                           // List of memory blocks
-    std::unordered_map<int, size_t> id_to_block;         // Maps ID to index in blocks
-    int next_id;                                         // Unique ID counter
+size_t MemoryManager::nextPowerOfTwo(size_t n) {
+    size_t power = 1;
+    while (power < n) {
+        power <<= 1;
+    }
+    return power;
+}
 
-    size_t nextPowerOfTwo(size_t n);                     // Rounds size to next power of two
-    int findBestFit(size_t size);                        // Finds best fitting free block
-    void mergeBlocks();                                  // Merges adjacent free blocks
+/**
+ * @brief Finds the index of the smallest fitting free block.
+ */
+int MemoryManager::findBestFit(size_t size) {
+    int best_index = -1;
+    size_t best_size = MEMORY_SIZE + 1;
 
-public:
-    MemoryManager();
+    for (size_t i = 0; i < blocks.size(); ++i) {
+        if (blocks[i].is_free && blocks[i].size >= size && blocks[i].size < best_size) {
+            best_index = static_cast<int>(i);
+            best_size = blocks[i].size;
+        }
+    }
+    return best_index;
+}
 
-    void processCommand(const std::string& command);     // Executes a command
-    void insert(size_t size, const std::string& data);   // Allocates memory and stores data
-    void find(int id) const;                             // Prints data by ID
-    void deleteBlock(int id);                            // Frees a block by ID
-    void update(int id, const std::string& new_data);    // Updates a block's contents
-    void dump() const;                                   // Dumps all memory blocks
-};
+/**
+ * @brief Merges adjacent free blocks (basic buddy behavior).
+ */
+void MemoryManager::mergeBlocks() {
+    for (size_t i = 0; i < blocks.size() - 1;) {
+        if (blocks[i].is_free && blocks[i + 1].is_free) {
+            blocks[i].size += blocks[i + 1].size;
+            blocks.erase(blocks.begin() + i + 1);
+        } else {
+            ++i;
+        }
+    }
+}
 
-#endif // MEMORY_MANAGER_H
+/**
+ * @brief Parses and executes a command from the input file.
+ */
+void MemoryManager::processCommand(const std::string& command) 
+    std::istringstream iss(command);
+    std::string op;
+    iss >> op;
+
+    if (op == "INSERT") {
+        size_t size;
+        std::string data;
+        iss >> size;
+        std::getline(iss, data);
+        if (!data.empty() && data[0] == ' ') data = data.substr(1);
+        insert(size, data);
+    } else if (op == "READ") {
+        int id;
+        iss >> id;
+        find(id);
+    } else if (op == "DELETE") {
+        int id;
+        iss >> id;
+        deleteBlock(id);
+    } else if (op == "UPDATE") 
+        int id;
+        std::string new_data;
+        iss >> id;
+        std::getline
