@@ -1,0 +1,9 @@
+INSERT 6 hello
+READ 0
+UPDATE 0 goodbye;
+READ 0
+DUMP
+DELETE 0
+DUMP
+
+
